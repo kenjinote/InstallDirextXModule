@@ -29,7 +29,4 @@
       <Filter>リソース ファイル</Filter>
     </ResourceCompile>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="DirextXModule\Apr2005_d3dx9_25_x64.cab" />
-  </ItemGroup>
 </Project>

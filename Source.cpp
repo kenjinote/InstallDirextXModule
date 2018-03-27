@@ -182,7 +182,7 @@ DATA necessary[] = {
 BOOL CreateTempDirectory(HWND hWnd, LPTSTR pszDir)
 {
 	DWORD dwSize = GetTempPath(0, 0);
-	if (dwSize == 0 || dwSize>MAX_PATH - 14) { MessageBox(hWnd, TEXT("GetTempPath Error"), NULL, MB_OK); goto END0; }
+	if (dwSize == 0 || dwSize > MAX_PATH - 14) { MessageBox(hWnd, TEXT("GetTempPath Error"), NULL, MB_OK); goto END0; }
 	LPTSTR pTmpPath;
 	pTmpPath = (LPTSTR)GlobalAlloc(GPTR, sizeof(TCHAR)*(dwSize + 1));
 	GetTempPath(dwSize + 1, pTmpPath);
@@ -214,6 +214,7 @@ VOID CreateFileFromResource(TCHAR *szResourceName, TCHAR *szResourceType, TCHAR 
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+	static HFONT hFont;
 	static HWND hRadio1;
 	static HWND hRadio2;
 	static HWND hTree;
@@ -222,6 +223,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 	case WM_CREATE:
 		InitCommonControls();
+		hFont = CreateFontW(-MulDiv(10, 96, 72), 0, 0, 0, FW_NORMAL, 0, 0, 0, SHIFTJIS_CHARSET, 0, 0, 0, 0, L"MS Shell Dlg");
 		hRadio1 = CreateWindow(TEXT("BUTTON"), TEXT("すべてインストール(&A)"), WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON, 0, 0, 0, 0, hWnd, 0, ((LPCREATESTRUCT)lParam)->hInstance, 0);
 		hRadio2 = CreateWindow(TEXT("BUTTON"), TEXT("インストールするモジュールを選択する(&S)"), WS_VISIBLE | WS_CHILD | BS_AUTORADIOBUTTON, 0, 0, 0, 0, hWnd, 0, ((LPCREATESTRUCT)lParam)->hInstance, 0);
 		hTree = CreateWindowEx(
@@ -231,7 +233,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			WS_DISABLED | WS_CHILD | WS_VISIBLE | TVS_CHECKBOXES,
 			0, 0, 0, 0,
 			hWnd,
-			0,
+			(HMENU)2000,
 			((LPCREATESTRUCT)lParam)->hInstance,
 			0);
 		{
@@ -245,12 +247,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				TreeView_InsertItem(hTree, &tv);
 			}
 		}
+		SetClassLongPtr(hTree, GCL_STYLE, GetClassLongPtr(hTree, GCL_STYLE) & ~CS_DBLCLKS);
 		hButton = CreateWindow(TEXT("BUTTON"), TEXT("インストール(&I)"), WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON, 0, 0, 0, 0, hWnd, (HMENU)IDOK, ((LPCREATESTRUCT)lParam)->hInstance, 0);
+		SendMessage(hRadio1, WM_SETFONT, (WPARAM)hFont, 0);
+		SendMessage(hRadio2, WM_SETFONT, (WPARAM)hFont, 0);
+		SendMessage(hTree, WM_SETFONT, (WPARAM)hFont, 0);
+		SendMessage(hButton, WM_SETFONT, (WPARAM)hFont, 0);
 		SendMessage(hRadio1, BM_SETCHECK, BST_CHECKED, 0);
 		break;
 	case WM_SIZE:
-		MoveWindow(hRadio1, 10, 10, 512, 32, TRUE);
-		MoveWindow(hRadio2, 10, 50, 512, 32, TRUE);
+		MoveWindow(hRadio1, 10, 10, 256, 32, TRUE);
+		MoveWindow(hRadio2, 10, 50, 256, 32, TRUE);
 		MoveWindow(hTree, 10, 90, LOWORD(lParam) - 20, HIWORD(lParam) - 100, TRUE);
 		MoveWindow(hButton, LOWORD(lParam) - 266, 10, 256, 32, TRUE);
 		break;
@@ -267,6 +274,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			if (HIWORD(wParam) == BN_CLICKED)
 			{
 				EnableWindow(hTree, TRUE);
+				SetFocus(hTree);
 			}
 		}
 		else if (LOWORD(wParam) == IDOK)
@@ -356,10 +364,31 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			}
 		}
 		break;
+	case WM_NOTIFY:
+		if (wParam == 2000)
+		{
+			if (((LPNMHDR)lParam)->code == NM_CLICK)
+			{
+				TVHITTESTINFO ht;
+				GetCursorPos(&ht.pt);
+				ScreenToClient(((LPNMHDR)lParam)->hwndFrom, &ht.pt);
+				TreeView_HitTest(((LPNMHDR)lParam)->hwndFrom, &ht);
+				if (ht.flags & TVHT_ONITEMLABEL)
+				{
+					TreeView_SetCheckState(hTree, ht.hItem, !TreeView_GetCheckState(hTree, ht.hItem));
+				}
+				else if (ht.flags & TVHT_ONITEMSTATEICON)
+				{
+					TreeView_SelectItem(hTree, ht.hItem);
+				}
+			}
+		}
+		break;
 	case WM_CLOSE:
 		DestroyWindow(hWnd);
 		break;
 	case WM_DESTROY:
+		DeleteObject(hFont);
 		PostQuitMessage(0);
 		break;
 	default:
