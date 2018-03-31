@@ -198,16 +198,12 @@ END0:
 
 VOID CreateFileFromResource(TCHAR *szResourceName, TCHAR *szResourceType, TCHAR *szResFileName)
 {
-	HRSRC hRs;
-	HGLOBAL hMem;
-	HANDLE hFile;
-	LPBYTE lpByte;
-	DWORD dwWritten, dwResSize;
-	hRs = FindResource(0, szResourceName, szResourceType);
-	dwResSize = SizeofResource(0, hRs);
-	hMem = LoadResource(0, hRs);
-	lpByte = (BYTE *)LockResource(hMem);
-	hFile = CreateFile(szResFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	HRSRC hRs = FindResource(0, szResourceName, szResourceType);
+	DWORD dwResSize = SizeofResource(0, hRs);
+	HGLOBAL hMem = LoadResource(0, hRs);
+	LPBYTE lpByte = (BYTE *)LockResource(hMem);
+	DWORD dwWritten;
+	HANDLE hFile = CreateFile(szResFileName, GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
 	WriteFile(hFile, lpByte, dwResSize, &dwWritten, NULL);
 	CloseHandle(hFile);
 }
